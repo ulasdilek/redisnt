@@ -9,6 +9,7 @@ class StoreManager:
             os.makedirs(StoreManager.BASE_PATH, exist_ok=True)
         self.__stores = {} # dict { id: name }
         self.__store_in_use = None
+        self.__stores_loaded = False
 
     
     def __check_store_in_use(self):
@@ -21,21 +22,27 @@ class StoreManager:
             raise Exception("Name must not be None.")
         
         self.__store_in_use = KVStore(name)
-        self.__stores[self.__store_in_use.get_id()] = name
+        self.__stores[str(self.__store_in_use.get_id())] = name
+
+
+    def list_stores(self)->list:
+        if not self.__stores_loaded:
+            self.load_stores()
+        return [(id, name) for id, name in self.__stores.items()]
 
 
     def load_stores(self):
-        # iterate .json files in BASE_PATH
         for file in os.listdir(StoreManager.BASE_PATH):
             if file.endswith(".json"):
                 id = file.split(".")[0]
                 name = KVStore.retreive_name(os.path.join(StoreManager.BASE_PATH, file))
                 self.__stores[id] = name
+        self.__stores_loaded = True
 
 
     def save_store_in_use(self):
         self.__check_store_in_use()
-        path = os.path.join(StoreManager.BASE_PATH, str(self.__store_in_use.get_id()) + ".json")
+        path = os.path.join(StoreManager.BASE_PATH)
         self.__store_in_use.save_storage(path)
 
 
@@ -46,7 +53,7 @@ class StoreManager:
     def change_store_in_use(self, name:str, id:str = None):
         if id is not None:
             if id in self.__stores:
-                self.__store_in_use = KVStore.from_file(os.path.join(StoreManager.BASE_PATH, id + ".json"))
+                self.__store_in_use = KVStore.from_file(os.path.join(StoreManager.BASE_PATH, str(id) + ".json"))
             else:
                 raise Exception(f"No store with id {id} found.")
         else:
@@ -56,7 +63,7 @@ class StoreManager:
             elif len(ids) > 1:
                 raise Exception(f"Multiple stores with name {name} found.")
             
-            self.__store_in_use = KVStore.from_file(os.path.join(StoreManager.BASE_PATH, ids[0] + ".json"))
+            self.__store_in_use = KVStore.from_file(os.path.join(StoreManager.BASE_PATH, str(ids[0]) + ".json"))
 
             
     def delete_store_in_use(self):
@@ -64,7 +71,7 @@ class StoreManager:
         self.__store_in_use.clear()
         path = os.path.join(StoreManager.BASE_PATH, str(self.__store_in_use.get_id()) + ".json")
         os.remove(path)
-        self.__stores.pop(self.__store_in_use.get_id())
+        self.__stores.pop(str(self.__store_in_use.get_id()))
         self.__store_in_use = None
 
 
@@ -105,7 +112,7 @@ class StoreManager:
 
     def get_id(self) -> str:
         self.__check_store_in_use()
-        return self.__store_in_use.get_id()
+        return str(self.__store_in_use.get_id())
     
 
     def get_store_count(self) -> int:
@@ -122,3 +129,12 @@ class StoreManager:
 
     def get_stores(self) -> dict:
         return self.__stores
+    
+    
+    def get_keys(self) -> list:
+        self.__check_store_in_use()
+        return self.__store_in_use.get_keys()
+    
+    
+    def is_store_in_use(self) -> bool:
+        return self.__store_in_use is not None

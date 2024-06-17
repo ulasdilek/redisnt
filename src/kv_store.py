@@ -48,6 +48,10 @@ class KVStore:
                 return data["name"]
         else:
             raise FileNotFoundError(f"No such file or directory: '{path}'")
+        
+    
+    def get_keys(self) -> list:
+        return self.__keys
 
 
     def add_item(self, key:str, value):
